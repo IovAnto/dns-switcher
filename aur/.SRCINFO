@@ -1,0 +1,15 @@
+pkgbase = dns-switcher
+	pkgdesc = TUI application for real-time DNS switching on Linux
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/IovAnto/dns-switcher
+	arch = x86_64
+	license = MIT
+	makedepends = rust
+	makedepends = cargo
+	depends = networkmanager
+	depends = polkit
+	source = dns-switcher-0.1.0.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v0.1.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = dns-switcher
