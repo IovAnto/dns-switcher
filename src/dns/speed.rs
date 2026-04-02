@@ -41,10 +41,9 @@ pub fn test_dns_latency(dns_ip: &str) -> Result<u64> {
     Ok(elapsed.as_millis() as u64)
 }
 
-/// tests the latency of multiple DNS servers concurrently
-/// uses tokio's spawn_blocking to run the blocking test_dns_latency in parallel
-/// WIP
-///
+// tests the latency of multiple DNS servers concurrently
+// uses tokio's spawn_blocking to run the blocking test_dns_latency in parallel
+// WIP
 // pub async fn test_all_dns(dns_ips: Vec<String>) -> Vec<(String, Result<u64>)> {
 //     use tokio::task;
 //     let mut handles = Vec::new();
