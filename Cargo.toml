@@ -1,6 +1,6 @@
 [package]
 name = "dns-switcher"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 description = "TUI app for real-time DNS switching on Linux"
 authors = ["IovAnto <iovine.antonio44@gmail.com>"]
