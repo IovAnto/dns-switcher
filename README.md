@@ -16,6 +16,7 @@ A terminal user interface (TUI) application for real-time DNS switching on Linux
 - **Dual Privilege Escalation**: Supports both `pkexec` (PolicyKit) and `sudo`
 
 ## Screenshots
+<img width="1154" height="532" alt="image" src="https://github.com/user-attachments/assets/74d9e40c-aef3-43fe-834d-ada554a48a47" />
 
 
 ## Installation
