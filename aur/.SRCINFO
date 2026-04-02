@@ -10,6 +10,6 @@ pkgbase = dns-switcher
 	depends = networkmanager
 	depends = polkit
 	source = dns-switcher-0.1.1.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v0.1.1.tar.gz
-	sha256sums = SKIP
+	sha256sums = ed76952bc4115969a452f45e3687bd88b0c5d2b514052f5b805e7a01613fea30
 
 pkgname = dns-switcher
