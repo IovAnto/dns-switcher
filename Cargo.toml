@@ -1,6 +1,6 @@
 [package]
 name = "dns-switcher"
-version = "0.1.1"
+version = "0.2.0"
 edition = "2021"
 description = "TUI app for real-time DNS switching on Linux"
 authors = ["IovAnto <iovine.antonio44@gmail.com>"]
@@ -8,16 +8,13 @@ license = "MIT"
 repository = "https://github.com/IovAnto/dns-switcher"
 homepage = "https://github.com/IovAnto/dns-switcher"
 readme = "README.md"
-keywords = ["dns", "tui", "networkmanager", "linux", "terminal"]
+keywords = ["dns", "tui", "iwd", "linux", "terminal"]
 categories = ["command-line-utilities", "network-programming"]
 
 [dependencies]
 # TUI Framework
 ratatui = "0.29"
 crossterm = "0.28"
-
-# Async runtime (per test velocità DNS)
-tokio = { version = "1", features = ["full"] }
 
 # Serializzazione (per salvare config)
 serde = { version = "1", features = ["derive"] }

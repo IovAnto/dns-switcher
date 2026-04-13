@@ -1,6 +1,6 @@
 # DNS Switcher
 
-A terminal user interface (TUI) application for real-time DNS switching on Linux systems using NetworkManager.
+A terminal user interface (TUI) application for real-time DNS switching on Linux systems using iwd and systemd-resolved.
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg)
 ![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)
@@ -61,7 +61,8 @@ cargo install --git https://github.com/IovAnto/dns-switcher.git
 #### Prerequisites
 
 - Rust 1.70 or later
-- NetworkManager (`nmcli`)
+- iwd (`iwctl`)
+- systemd-resolved (`resolvectl`)
 - PolicyKit (`pkexec`) or `sudo`
 
 #### Build and Install
@@ -136,28 +137,28 @@ Configuration is stored in `~/.config/dns-switcher/config.json`:
 
 ## Requirements
 
-- **NetworkManager**: This application uses `nmcli` to manage DNS settings
+- **iwd + systemd-resolved**: This application uses `iwctl` for interface detection and `resolvectl` to manage DNS settings
 - **Root privileges**: DNS changes require elevated privileges (via `pkexec` or `sudo`)
-- **Active network connection**: Must have an active NetworkManager connection
+- **Active network connection**: Must have an active network interface
 
 ## Technical Details
 
-- DNS is checked every 5 seconds to detect external changes
-- Uses NetworkManager's connection modification to change DNS settings
+- DNS is checked every 10 seconds to reduce background overhead
+- Uses `resolvectl` to set/revert DNS on the active interface
 - Supports both IPv4 DNS servers
 - Speed test sends a minimal DNS query to measure response time
 
 ## Troubleshooting
 
-### "NetworkManager (nmcli) is not available"
+### "Required DNS backend tools are not available"
 
-Install NetworkManager:
+Install required tools:
 ```bash
 # Arch Linux
-sudo pacman -S networkmanager
+sudo pacman -S iwd systemd
 
 # Debian/Ubuntu
-sudo apt install network-manager
+sudo apt install iwd systemd-resolved
 ```
 
 ### "Authentication cancelled by user"
@@ -166,7 +167,7 @@ The application requires root privileges to change DNS. Make sure to authenticat
 
 ### DNS change doesn't persist after reboot
 
-This is expected behavior. The application modifies the current connection settings, which may be reset by DHCP. Consider using NetworkManager's persistent DNS settings for permanent changes.
+This is expected behavior. DNS settings may be reset by DHCP or network reconnection events.
 
 ## Contributing
 

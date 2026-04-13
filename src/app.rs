@@ -32,6 +32,7 @@ pub struct App {
     pub is_error: bool,
     pub message_time: Option<Instant>,
     pub is_loading: bool,
+    pub help_visible: bool,
     config: Config,
     dns_manager: DnsManager,
 }
@@ -60,6 +61,7 @@ impl App {
             is_error: false,
             message_time: None,
             is_loading: false,
+            help_visible: false,
             config,
             dns_manager,
         })
@@ -93,6 +95,14 @@ impl App {
 
     pub fn quit(&mut self) {
         self.running = false;
+    }
+
+    pub fn toggle_help(&mut self) {
+        self.help_visible = !self.help_visible;
+    }
+
+    pub fn close_help(&mut self) {
+        self.help_visible = false;
     }
 
     pub fn selected_provider(&self) -> Option<&DnsProvider> {

@@ -15,17 +15,27 @@ mod colors {
     pub const HIGHLIGHT_BG: Color = Color::Rgb(40, 40, 60);
 }
 
+const BREAKPOINT_NARROW: u16 = 60;
+const BREAKPOINT_TINY_W: u16 = 40;
+const BREAKPOINT_TINY_H: u16 = 8;
+const BREAKPOINT_COMPACT_HEADER: u16 = 65;
+const BREAKPOINT_STACKED_TOAST: u16 = 60;
+const BREAKPOINT_WRAP_IP: u16 = 60;
+
 pub fn render(frame: &mut Frame, app: &mut App) {
     // Main screen layout: header, content, footer.
+    let screen = frame.area();
+    let compact_height = screen.height < 18;
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .margin(1)
+        .margin(if compact_height { 0 } else { 1 })
         .constraints([
             Constraint::Length(3),
-            Constraint::Min(10),
-            Constraint::Length(3),
+            Constraint::Min(5),
+            Constraint::Length(if screen.height < 12 { 2 } else { 3 }),
         ])
-        .split(frame.area());
+        .split(screen);
 
     render_header(frame, app, chunks[0]);
     render_provider_list(frame, app, chunks[1]);
@@ -41,12 +51,18 @@ pub fn render(frame: &mut Frame, app: &mut App) {
 
     // Toast notifications appear above the main layout.
     if app.status_message.is_some() {
-        render_status_toast(frame, app);
+        render_status_toast(frame, app, chunks[0], chunks[1]);
+    }
+
+    if app.help_visible {
+        render_help_popup(frame);
     }
 }
 
 fn render_header(frame: &mut Frame, app: &App, area: Rect) {
+    let compact = area.width < BREAKPOINT_COMPACT_HEADER;
     let active_dns_text = match &app.active_dns {
+        Some(ip) if compact => format!(" DNS: {} ", ip),
         Some(ip) => {
             let name = app
                 .providers
@@ -56,6 +72,7 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
                 .unwrap_or_else(|| "Custom".to_string());
             format!(" Active: {} ({}) ", name, ip)
         }
+        None if compact => " DNS: checking... ".to_string(),
         None => " Active: Checking... ".to_string(),
     };
 
@@ -74,11 +91,10 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
-    // Split list and details into two columns.
-    let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
+    let narrow = area.width < BREAKPOINT_NARROW;
+    let tiny = area.width < BREAKPOINT_TINY_W || area.height < BREAKPOINT_TINY_H;
+    let estimated_list_width = if narrow { area.width } else { area.width / 2 };
+    let content_budget = estimated_list_width.saturating_sub(10) as usize;
 
     let items: Vec<ListItem> = app
         .providers
@@ -95,8 +111,10 @@ fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
             let latency = app
                 .latencies
                 .get(provider.id)
-                .map(|ms| format!(" {:>3}ms", ms))
-                .unwrap_or_else(|| "     ".to_string());
+                .map(|ms| format!(" {}ms", ms))
+                .unwrap_or_default();
+
+            let show_latency = content_budget >= 14;
 
             let style = if is_active {
                 Style::default().fg(colors::ACTIVE).bold()
@@ -104,12 +122,27 @@ fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
                 Style::default()
             };
 
-            let custom_tag = if provider.is_custom { " [custom]" } else { "" };
+            let custom_tag = if provider.is_custom {
+                if content_budget < 16 {
+                    " [c]"
+                } else {
+                    " [custom]"
+                }
+            } else {
+                ""
+            };
+
+            let base_label = format!("{}{}", provider.name, custom_tag);
+
+            let label = truncate_with_ellipsis(&base_label, content_budget.max(4));
 
             ListItem::new(Line::from(vec![
                 Span::styled(format!(" {} ", indicator), style),
-                Span::styled(format!("{:<12}{}", provider.name, custom_tag), style),
-                Span::styled(latency, Style::default().fg(colors::MUTED)),
+                Span::styled(label, style),
+                Span::styled(
+                    if show_latency { latency } else { String::new() },
+                    Style::default().fg(colors::MUTED),
+                ),
             ]))
         })
         .collect();
@@ -120,7 +153,7 @@ fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
                 .title(" Providers ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(colors::PRIMARY))
-                .padding(Padding::vertical(1)),
+                .padding(Padding::vertical(if narrow { 0 } else { 1 })),
         )
         .highlight_style(
             Style::default()
@@ -132,8 +165,57 @@ fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
     let mut list_state = ListState::default();
     list_state.select(Some(app.selected_index));
 
+    if tiny {
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(1)])
+            .split(area);
+
+        frame.render_stateful_widget(list, rows[0], &mut list_state);
+        render_provider_details_strip(frame, app, rows[1]);
+        return;
+    }
+
+    if narrow {
+        // Keep details visible even on tight layouts.
+        let details_height = if area.height >= 16 { 7 } else { 5 };
+
+        let rows = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(details_height)])
+            .split(area);
+
+        frame.render_stateful_widget(list, rows[0], &mut list_state);
+        render_provider_details(frame, app, rows[1], true);
+        return;
+    }
+
+    // Split list and details into two columns.
+    let chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(area);
+
     frame.render_stateful_widget(list, chunks[0], &mut list_state);
 
+    render_provider_details(frame, app, chunks[1], false);
+}
+
+fn truncate_with_ellipsis(input: &str, max_chars: usize) -> String {
+    if max_chars <= 1 {
+        return "…".to_string();
+    }
+
+    let count = input.chars().count();
+    if count <= max_chars {
+        return input.to_string();
+    }
+
+    let kept: String = input.chars().take(max_chars - 1).collect();
+    format!("{}…", kept)
+}
+
+fn render_provider_details(frame: &mut Frame, app: &App, area: Rect, compact: bool) {
     // Show details for the currently selected provider.
     if let Some(provider) = app.selected_provider() {
         let latency_text = app
@@ -142,36 +224,114 @@ fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
             .map(|ms| format!("{} ms", ms))
             .unwrap_or_else(|| "Not tested".to_string());
 
-        let details = vec![
-            Line::from(vec![
-                Span::styled("Name: ", Style::default().fg(colors::MUTED)),
+        let ultra_compact = compact && (area.height <= 4 || area.width < 48);
+
+        let wrap_long_ip = !compact && area.width < BREAKPOINT_WRAP_IP;
+
+        let details = if ultra_compact {
+            vec![Line::from(vec![
                 Span::styled(provider.name, Style::default().bold()),
-            ]),
-            Line::from(""),
-            Line::from(vec![
-                Span::styled("Primary: ", Style::default().fg(colors::MUTED)),
-                Span::raw(provider.primary),
-            ]),
-            Line::from(vec![
-                Span::styled("Secondary: ", Style::default().fg(colors::MUTED)),
-                Span::raw(provider.secondary),
-            ]),
-            Line::from(""),
-            Line::from(vec![
+                Span::raw("  "),
+                Span::styled(provider.primary, Style::default()),
+            ])]
+        } else if compact {
+            vec![Line::from(vec![
+                Span::styled(provider.name, Style::default().bold()),
+                Span::styled("  ", Style::default()),
+                Span::styled(provider.primary, Style::default()),
+                Span::styled("  ", Style::default()),
+                Span::styled(latency_text, Style::default().fg(colors::MUTED)),
+            ])]
+        } else {
+            let mut details = vec![
+                Line::from(vec![
+                    Span::styled("Name: ", Style::default().fg(colors::MUTED)),
+                    Span::styled(provider.name, Style::default().bold()),
+                ]),
+                Line::from(""),
+            ];
+
+            if wrap_long_ip && is_long_ip(provider.primary) {
+                details.push(Line::from(vec![Span::styled(
+                    "Primary:",
+                    Style::default().fg(colors::MUTED),
+                )]));
+                details.push(Line::from(vec![Span::raw(provider.primary)]));
+            } else {
+                details.push(Line::from(vec![
+                    Span::styled("Primary: ", Style::default().fg(colors::MUTED)),
+                    Span::raw(provider.primary),
+                ]));
+            }
+
+            if wrap_long_ip && is_long_ip(provider.secondary) {
+                details.push(Line::from(vec![Span::styled(
+                    "Secondary:",
+                    Style::default().fg(colors::MUTED),
+                )]));
+                details.push(Line::from(vec![Span::raw(provider.secondary)]));
+            } else {
+                details.push(Line::from(vec![
+                    Span::styled("Secondary: ", Style::default().fg(colors::MUTED)),
+                    Span::raw(provider.secondary),
+                ]));
+            }
+
+            details.push(Line::from(""));
+            details.push(Line::from(vec![
                 Span::styled("Latency: ", Style::default().fg(colors::MUTED)),
                 Span::raw(latency_text),
-            ]),
-        ];
+            ]));
+
+            details
+        };
 
         let details_widget = Paragraph::new(details).block(
             Block::default()
                 .title(" Details ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(colors::PRIMARY))
-                .padding(Padding::new(2, 2, 1, 1)),
+                .padding(Padding::new(
+                    if ultra_compact {
+                        0
+                    } else if compact {
+                        1
+                    } else {
+                        2
+                    },
+                    1,
+                    1,
+                    1,
+                )),
         );
 
-        frame.render_widget(details_widget, chunks[1]);
+        frame.render_widget(details_widget, area);
+    }
+}
+
+fn is_long_ip(ip: &str) -> bool {
+    ip.chars().filter(|c| *c != '.').count() > 6
+}
+
+fn render_provider_details_strip(frame: &mut Frame, app: &App, area: Rect) {
+    if let Some(provider) = app.selected_provider() {
+        let latency_text = app
+            .latencies
+            .get(provider.id)
+            .map(|ms| format!("{}ms", ms))
+            .unwrap_or_else(|| "n/a".to_string());
+
+        let line = Line::from(vec![
+            Span::styled("Details: ", Style::default().fg(colors::MUTED)),
+            Span::styled(provider.name, Style::default().bold()),
+            Span::raw(" "),
+            Span::styled(provider.primary, Style::default().fg(colors::ACTIVE)),
+            Span::raw("  "),
+            Span::styled(latency_text, Style::default().fg(colors::MUTED)),
+        ]);
+
+        let strip = Paragraph::new(line).alignment(Alignment::Left);
+        frame.render_widget(strip, area);
     }
 }
 
@@ -181,6 +341,32 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
         vec![
             Span::styled(" ⏳ ", Style::default().fg(colors::PRIMARY)),
             Span::raw("Processing..."),
+        ]
+    } else if area.width < 56 {
+        vec![
+            Span::styled(" ↑↓ ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Nav "),
+            Span::styled(" Enter ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Apply "),
+            Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Help "),
+            Span::styled(" q ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Quit"),
+        ]
+    } else if area.width < 90 {
+        vec![
+            Span::styled(" ↑↓ ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Navigate  "),
+            Span::styled(" Enter ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Apply  "),
+            Span::styled(" t ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Test  "),
+            Span::styled(" a ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Add  "),
+            Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Help  "),
+            Span::styled(" q ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Quit"),
         ]
     } else {
         vec![
@@ -196,6 +382,8 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
             Span::raw("Delete  "),
             Span::styled(" r ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw("Reset ISP  "),
+            Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("Help  "),
             Span::styled(" q ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw("Quit"),
         ]
@@ -212,7 +400,12 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
 
 fn render_input_popup(frame: &mut Frame, app: &App) {
     // Centered modal dialog for custom DNS input.
-    let area = centered_rect(50, 20, frame.area());
+    let screen = frame.area();
+    let area = centered_rect(
+        if screen.width < 90 { 80 } else { 50 },
+        if screen.height < 30 { 30 } else { 20 },
+        screen,
+    );
 
     frame.render_widget(ratatui::widgets::Clear, area);
 
@@ -247,12 +440,13 @@ fn render_input_popup(frame: &mut Frame, app: &App) {
 
     frame.render_widget(popup, area);
 
-    let cursor_x = area.x + 3 + app.input_buffer.len() as u16;
+    let max_cursor_x = area.x + area.width.saturating_sub(2);
+    let cursor_x = (area.x + 3 + app.input_buffer.len() as u16).min(max_cursor_x);
     let cursor_y = area.y + 2;
     frame.set_cursor_position((cursor_x, cursor_y));
 }
 
-fn render_status_toast(frame: &mut Frame, app: &App) {
+fn render_status_toast(frame: &mut Frame, app: &App, header_area: Rect, content_area: Rect) {
     if let Some(msg) = &app.status_message {
         let color = if app.is_error {
             colors::ERROR
@@ -261,15 +455,39 @@ fn render_status_toast(frame: &mut Frame, app: &App) {
         };
         let icon = if app.is_error { "✗" } else { "✓" };
 
-        let msg_width = (msg.len() + 6).clamp(20, 50) as u16;
-        let toast_height = 3u16;
+        if header_area.width < 20 || header_area.height < 3 {
+            return;
+        }
 
-        let screen = frame.area();
+        let list_is_stacked = content_area.width < BREAKPOINT_STACKED_TOAST;
+
+        let (anchor_x, target_width) = if list_is_stacked {
+            (header_area.x + 1, header_area.width.saturating_sub(2))
+        } else {
+            let cols = Layout::default()
+                .direction(Direction::Horizontal)
+                .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+                .split(content_area);
+            (cols[1].x, cols[1].width)
+        };
+
+        let right_limit = (header_area.x + header_area.width).saturating_sub(1);
+        let available_w = right_limit
+            .saturating_sub(anchor_x)
+            .saturating_add(1)
+            .max(10);
+        let natural_w = ((msg.chars().count() + 6) as u16).max(10);
+        let msg_width = natural_w.min(target_width).min(available_w);
+
+        let column_right = anchor_x.saturating_add(target_width.saturating_sub(1));
+        let align_right = column_right.saturating_sub(msg_width).saturating_add(1);
+        let max_x = right_limit.saturating_sub(msg_width).saturating_add(1);
+
         let area = Rect {
-            x: screen.width.saturating_sub(msg_width + 2),
-            y: 1,
+            x: align_right.min(max_x),
+            y: header_area.y,
             width: msg_width,
-            height: toast_height,
+            height: 3,
         };
 
         frame.render_widget(ratatui::widgets::Clear, area);
@@ -287,6 +505,69 @@ fn render_status_toast(frame: &mut Frame, app: &App) {
 
         frame.render_widget(toast, area);
     }
+}
+
+fn render_help_popup(frame: &mut Frame) {
+    let screen = frame.area();
+    let area = centered_rect(
+        if screen.width < 90 { 92 } else { 70 },
+        if screen.height < 30 { 70 } else { 55 },
+        screen,
+    );
+
+    frame.render_widget(ratatui::widgets::Clear, area);
+
+    let help_lines = vec![
+        Line::from(vec![
+            Span::styled("Navigation", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": ↑/↓, j/k, Home/End"),
+        ]),
+        Line::from(vec![
+            Span::styled("Apply DNS", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": Enter"),
+        ]),
+        Line::from(vec![
+            Span::styled("Test latency", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": t"),
+        ]),
+        Line::from(vec![
+            Span::styled("Add custom", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": a"),
+        ]),
+        Line::from(vec![
+            Span::styled("Delete custom", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": d / Delete"),
+        ]),
+        Line::from(vec![
+            Span::styled("Reset DNS", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": r"),
+        ]),
+        Line::from(vec![
+            Span::styled("Help", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": h (toggle)"),
+        ]),
+        Line::from(vec![
+            Span::styled("Quit", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": q / Esc / Ctrl+C"),
+        ]),
+        Line::from(""),
+        Line::from(Span::styled(
+            "Press h, Esc or q to close",
+            Style::default().fg(colors::MUTED),
+        )),
+    ];
+
+    let popup = Paragraph::new(help_lines)
+        .block(
+            Block::default()
+                .title(" Help ")
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(colors::PRIMARY))
+                .padding(Padding::new(2, 2, 1, 1)),
+        )
+        .alignment(Alignment::Left);
+
+    frame.render_widget(popup, area);
 }
 
 fn centered_rect(percent_x: u16, percent_y: u16, area: Rect) -> Rect {

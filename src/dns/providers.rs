@@ -26,7 +26,7 @@ impl DnsProvider {
         }
     }
 
-    /// Return DNS IPs formatted for nmcli
+    /// Return DNS IPs formatted for backend commands
     pub fn dns_string(&self) -> String {
         if self.secondary.is_empty() {
             self.primary.to_string()

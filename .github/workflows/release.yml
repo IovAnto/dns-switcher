@@ -78,7 +78,7 @@ jobs:
         arch=('x86_64')
         url="https://github.com/IovAnto/dns-switcher"
         license=('MIT')
-        depends=('networkmanager' 'polkit')
+        depends=('iwd' 'systemd' 'polkit')
         makedepends=('rust' 'cargo')
         source=("$pkgname-$pkgver.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v$pkgver.tar.gz")
         sha256sums=('SKIP')
@@ -100,18 +100,19 @@ jobs:
       run: |
         cat > .SRCINFO << 'EOF'
         pkgbase = dns-switcher
-        	pkgdesc = TUI application for real-time DNS switching on Linux
-        	pkgver = ${{ steps.version.outputs.version }}
-        	pkgrel = 1
-        	url = https://github.com/IovAnto/dns-switcher
-        	arch = x86_64
-        	license = MIT
-        	makedepends = rust
-        	makedepends = cargo
-        	depends = networkmanager
-        	depends = polkit
-        	source = dns-switcher-${{ steps.version.outputs.version }}.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v${{ steps.version.outputs.version }}.tar.gz
-        	sha256sums = SKIP
+            pkgdesc = TUI application for real-time DNS switching on Linux
+            pkgver = ${{ steps.version.outputs.version }}
+            pkgrel = 1
+            url = https://github.com/IovAnto/dns-switcher
+            arch = x86_64
+            license = MIT
+            makedepends = rust
+            makedepends = cargo
+            depends = iwd
+            depends = systemd
+            depends = polkit
+            source = dns-switcher-${{ steps.version.outputs.version }}.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v${{ steps.version.outputs.version }}.tar.gz
+            sha256sums = SKIP
 
         pkgname = dns-switcher
         EOF

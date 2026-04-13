@@ -17,10 +17,10 @@ mod ui;
 use app::{App, AppMode};
 
 fn main() -> Result<()> {
-    // Exit early if NetworkManager is not available.
+    // Exit early if required DNS backend tooling is not available.
     if !dns::DnsManager::is_available() {
-        eprintln!("Error: NetworkManager (nmcli) is not available.");
-        eprintln!("This application requires NetworkManager to manage DNS settings.");
+        eprintln!("Error: Required DNS backend tools are not available.");
+        eprintln!("{}", dns::DnsManager::availability_hint());
         std::process::exit(1);
     }
 
@@ -41,7 +41,7 @@ fn main() -> Result<()> {
 fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> {
     let mut app = App::new()?;
     let mut last_refresh = std::time::Instant::now();
-    let refresh_interval = Duration::from_secs(5);
+    let refresh_interval = Duration::from_secs(10);
 
     while app.running {
         // Redraw the UI every loop, refresh rates good
@@ -66,8 +66,13 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> 
 
                 // Dismiss any visible message before processing new input.
                 if app.status_message.is_some() {
-                    app.dismiss_message();
-                    continue;
+                    match key.code {
+                        KeyCode::Esc | KeyCode::Enter | KeyCode::Char(' ') => {
+                            app.dismiss_message();
+                            continue;
+                        }
+                        _ => {}
+                    }
                 }
 
                 match app.mode {
@@ -84,6 +89,14 @@ fn run_app(terminal: &mut Terminal<CrosstermBackend<io::Stdout>>) -> Result<()> 
 }
 
 fn handle_normal_input(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
+    if app.help_visible {
+        match code {
+            KeyCode::Char('h') | KeyCode::Esc | KeyCode::Char('q') => app.close_help(),
+            _ => {}
+        }
+        return;
+    }
+
     match code {
         KeyCode::Up | KeyCode::Char('k') => app.previous(),
         KeyCode::Down | KeyCode::Char('j') => app.next(),
@@ -98,6 +111,7 @@ fn handle_normal_input(app: &mut App, code: KeyCode, modifiers: KeyModifiers) {
         KeyCode::Char('a') => app.start_add_custom(),
         KeyCode::Char('d') | KeyCode::Delete => app.delete_selected(),
         KeyCode::Char('r') => app.reset_dns(),
+        KeyCode::Char('h') => app.toggle_help(),
         KeyCode::Char('q') => app.quit(),
         KeyCode::Char('c') if modifiers.contains(KeyModifiers::CONTROL) => app.quit(),
         KeyCode::Esc => app.quit(),
