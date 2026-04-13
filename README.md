@@ -14,6 +14,7 @@ A terminal user interface (TUI) application for real-time DNS switching on Linux
 - **Speed Testing**: Test latency to all DNS providers
 - **Persistent Configuration**: Custom servers are saved and restored automatically
 - **Dual Privilege Escalation**: Supports both `pkexec` (PolicyKit) and `sudo`
+- **Responsive TUI**: Adaptive layout with inline details/help on small terminals
 
 ## Screenshots
 <img width="1154" height="532" alt="image" src="https://github.com/user-attachments/assets/74d9e40c-aef3-43fe-834d-ada554a48a47" />
@@ -43,17 +44,12 @@ Stable version:
 yay -S dns-switcher
 ```
 
-Development version (latest git):
-```bash
-yay -S dns-switcher-git
-```
-
 ### Using Cargo
 
 If you have Rust installed:
 
 ```bash
-cargo install --git https://github.com/IovAnto/dns-switcher.git
+cargo install dns-switcher
 ```
 
 ### From Source
@@ -94,10 +90,13 @@ dns-switcher
 | `↑` / `k` | Move selection up |
 | `↓` / `j` | Move selection down |
 | `Enter` | Apply selected DNS |
+| `h` | Toggle help popup |
 | `t` | Test latency of all DNS servers |
 | `a` | Add custom DNS server |
 | `d` / `Delete` | Delete custom DNS server |
 | `r` | Reset to ISP default DNS |
+| `Home` / `g` | Jump to first provider |
+| `End` / `G` | Jump to last provider |
 | `q` / `Esc` | Quit |
 
 ### Pre-configured DNS Providers
@@ -164,6 +163,11 @@ sudo apt install iwd systemd-resolved
 ### "Authentication cancelled by user"
 
 The application requires root privileges to change DNS. Make sure to authenticate when prompted.
+
+If privilege escalation fails in non-interactive shells, run from a real terminal:
+```bash
+sudo dns-switcher
+```
 
 ### DNS change doesn't persist after reboot
 
