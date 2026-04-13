@@ -51,8 +51,8 @@ check_deps() {
         missing+=("tar")
     fi
     
-    if ! command -v nmcli &> /dev/null; then
-        warn "NetworkManager (nmcli) not found. dns-switcher requires it to function."
+    if ! command -v resolvectl &> /dev/null; then
+        warn "resolvectl not found. dns-switcher requires it to function."
     fi
     
     if [ ${#missing[@]} -gt 0 ]; then
