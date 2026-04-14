@@ -78,14 +78,14 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
     let header_content = if compact {
         vec![
             Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
-            Span::raw("│"),
+            Span::raw(" │ "),
             Span::styled(status, Style::default().fg(colors::PRIMARY)),
             Span::styled(active_ip, Style::default().fg(colors::ACTIVE).bold()),
         ]
     } else {
         vec![
             Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
-            Span::raw(" │"),
+            Span::raw(" │ "),
             Span::styled(
                 if status.is_empty() { " " } else { status },
                 Style::default()

@@ -15,6 +15,12 @@ The application is built with Rust and features a high-performance, asynchronous
 - Reactive Rendering: Utilizes an event-driven loop that only redraws the UI when necessary, resulting in nearly 0% CPU usage when idle.
 - Stealth Mode: Optional `--no-help` flag to hide the footer help menu for a more minimalist experience.
 
+## Screenshots
+
+![Normal mode](media/img/normal.png)
+
+![No help mode](media/img/no_help.png)
+
 ## Technical Improvements
 
 Starting from version 0.2.1, dns-switcher has been migrated to an asynchronous event loop using Tokio. This migration ensures that the application remains completely idle while waiting for user input or background tasks, drastically reducing its impact on system resources compared to traditional polling-based TUI applications.
