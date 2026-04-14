@@ -1,6 +1,6 @@
 pkgbase = dns-switcher
 	pkgdesc = TUI application for real-time DNS switching on Linux
-	pkgver = 0.2.0
+	pkgver = 0.2.2
 	pkgrel = 1
 	url = https://github.com/IovAnto/dns-switcher
 	arch = x86_64
@@ -10,7 +10,7 @@ pkgbase = dns-switcher
 	depends = iwd
 	depends = systemd
 	depends = polkit
-	source = dns-switcher-0.2.0.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v0.2.0.tar.gz
-	sha256sums = ed76952bc4115969a452f45e3687bd88b0c5d2b514052f5b805e7a01613fea30
+	source = dns-switcher-0.2.2.tar.gz::https://github.com/IovAnto/dns-switcher/archive/refs/tags/v0.2.2.tar.gz
+	sha256sums = cbd149088102e35e670b3cc20849d8af09591095e2f1d0c37fea2ee7f60e8c0f
 
 pkgname = dns-switcher
