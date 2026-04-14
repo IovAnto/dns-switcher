@@ -1,187 +1,70 @@
-# DNS Switcher
+# dns-switcher
 
-A terminal user interface (TUI) application for real-time DNS switching on Linux systems using iwd and systemd-resolved.
+dns-switcher is a lightweight terminal user interface (TUI) for Arch Linux and other Linux distributions, designed to facilitate rapid switching between different DNS providers. It simplifies the process of changing system DNS settings by providing a clean, responsive interface for selecting both built-in and custom DNS servers.
 
-![License](https://img.shields.io/badge/license-MIT-blue.svg)
-![Rust](https://img.shields.io/badge/rust-1.70%2B-orange.svg)
+The application is built with Rust and features a high-performance, asynchronous architecture.
 
 ## Features
 
-- **Quick DNS Switching**: Switch between popular DNS providers with a single keystroke
-- **Pre-configured Providers**: Google, Cloudflare, OpenDNS, AdGuard, and Quad9
-- **Custom DNS Servers**: Add and manage your own DNS servers
-- **Real-time Status**: Displays the currently active DNS server
-- **Speed Testing**: Test latency to all DNS providers
-- **Persistent Configuration**: Custom servers are saved and restored automatically
-- **Dual Privilege Escalation**: Supports both `pkexec` (PolicyKit) and `sudo`
-- **Responsive TUI**: Adaptive layout with inline details/help on small terminals
+- Provider Management: Quick selection from a list of popular DNS providers (Cloudflare, Google, Quad9, etc.).
+- Custom DNS: Ability to add and persist your own custom DNS server configurations.
+- Latency Testing: Real-time speed testing to identify the most responsive DNS provider for your current location.
+- Automatic Detection: Identifies and displays the currently active system DNS.
+- Adaptive Interface: Responsive design that adjusts its layout for different terminal sizes and heights.
+- Resource Efficient: Optimized binary with a small memory footprint.
+- Reactive Rendering: Utilizes an event-driven loop that only redraws the UI when necessary, resulting in nearly 0% CPU usage when idle.
+- Stealth Mode: Optional `--no-help` flag to hide the footer help menu for a more minimalist experience.
 
-## Screenshots
-<img width="1154" height="532" alt="image" src="https://github.com/user-attachments/assets/74d9e40c-aef3-43fe-834d-ada554a48a47" />
+## Technical Improvements
 
+Starting from version 0.2.1, dns-switcher has been migrated to an asynchronous event loop using Tokio. This migration ensures that the application remains completely idle while waiting for user input or background tasks, drastically reducing its impact on system resources compared to traditional polling-based TUI applications.
+
+## Requirements
+
+- Linux: The tool is designed for Linux-based systems.
+- NetworkManager or Resolvconf: The tool requires system-level permissions or standard backends to modify DNS settings.
 
 ## Installation
 
-### Quick Install (Binary)
-
-Download and install the latest release:
-
-```bash
-curl -fsSL https://github.com/IovAnto/dns-switcher/releases/latest/download/dns-switcher-linux-x86_64.tar.gz | tar -xz
-sudo install -Dm755 dns-switcher /usr/local/bin/dns-switcher
-```
-
-Or use the install script:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/IovAnto/dns-switcher/main/install.sh | bash
-```
-
-### From AUR (Arch Linux)
-
-Stable version:
+### AUR (Arch Linux)
+The package is available in the Arch User Repository:
 ```bash
 yay -S dns-switcher
 ```
 
-### Using Cargo
-
-If you have Rust installed:
-
+### Cargo
+Install directly from crates.io using the Rust toolchain:
 ```bash
 cargo install dns-switcher
 ```
 
-### From Source
-
-#### Prerequisites
-
-- Rust 1.70 or later
-- iwd (`iwctl`)
-- systemd-resolved (`resolvectl`)
-- PolicyKit (`pkexec`) or `sudo`
-
-#### Build and Install
+### Installation via Script (curl)
+You can install the latest version of dns-switcher directly using this script. It handles cloning, building, and installing the binary to your local path.
 
 ```bash
-git clone https://github.com/IovAnto/dns-switcher.git
-cd dns-switcher
-cargo build --release
-sudo install -Dm755 target/release/dns-switcher /usr/local/bin/dns-switcher
-```
-
-### Uninstall
-
-```bash
-sudo rm /usr/local/bin/dns-switcher
-rm -rf ~/.config/dns-switcher
+curl -sSL https://raw.githubusercontent.com/IovAnto/dns-switcher/main/install.sh | bash
 ```
 
 ## Usage
 
+Launch the application with root privileges if your system requires them to modify DNS settings:
 ```bash
 dns-switcher
 ```
 
-### Keyboard Shortcuts
+### Options
+- `--no-help`: Starts the application without the help footer, providing more vertical space for the provider list.
 
-| Key | Action |
-|-----|--------|
-| `↑` / `k` | Move selection up |
-| `↓` / `j` | Move selection down |
-| `Enter` | Apply selected DNS |
-| `h` | Toggle help popup |
-| `t` | Test latency of all DNS servers |
-| `a` | Add custom DNS server |
-| `d` / `Delete` | Delete custom DNS server |
-| `r` | Reset to ISP default DNS |
-| `Home` / `g` | Jump to first provider |
-| `End` / `G` | Jump to last provider |
-| `q` / `Esc` | Quit |
-
-### Pre-configured DNS Providers
-
-| Provider | Primary | Secondary |
-|----------|---------|-----------|
-| Google | 8.8.8.8 | 8.8.4.4 |
-| Cloudflare | 1.1.1.1 | 1.0.0.1 |
-| OpenDNS | 208.67.222.222 | 208.67.220.220 |
-| AdGuard | 94.140.14.14 | 94.140.15.15 |
-| Quad9 | 9.9.9.9 | 149.112.112.112 |
-
-### Adding Custom DNS Servers
-
-1. Press `a` to add a custom server
-2. Enter a name (e.g., "My DNS")
-3. Enter IP address(es) (e.g., "1.2.3.4" or "1.2.3.4 5.6.7.8")
-4. Press `Enter` to confirm
-
-Custom servers are saved to `~/.config/dns-switcher/config.json`.
-
-## Configuration
-
-Configuration is stored in `~/.config/dns-switcher/config.json`:
-
-```json
-{
-  "custom_providers": [
-    {
-      "name": "My Custom DNS",
-      "primary": "1.2.3.4",
-      "secondary": "5.6.7.8"
-    }
-  ]
-}
-```
-
-## Requirements
-
-- **iwd + systemd-resolved**: This application uses `iwctl` for interface detection and `resolvectl` to manage DNS settings
-- **Root privileges**: DNS changes require elevated privileges (via `pkexec` or `sudo`)
-- **Active network connection**: Must have an active network interface
-
-## Technical Details
-
-- DNS is checked every 10 seconds to reduce background overhead
-- Uses `resolvectl` to set/revert DNS on the active interface
-- Supports both IPv4 DNS servers
-- Speed test sends a minimal DNS query to measure response time
-
-## Troubleshooting
-
-### "Required DNS backend tools are not available"
-
-Install required tools:
-```bash
-# Arch Linux
-sudo pacman -S iwd systemd
-
-# Debian/Ubuntu
-sudo apt install iwd systemd-resolved
-```
-
-### "Authentication cancelled by user"
-
-The application requires root privileges to change DNS. Make sure to authenticate when prompted.
-
-If privilege escalation fails in non-interactive shells, run from a real terminal:
-```bash
-sudo dns-switcher
-```
-
-### DNS change doesn't persist after reboot
-
-This is expected behavior. DNS settings may be reset by DHCP or network reconnection events.
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
+### Keybindings
+- Arrows / j, k: Navigate the provider list.
+- Enter: Apply the selected DNS settings.
+- t: Run a latency test for all providers.
+- a: Add a custom DNS provider.
+- d: Delete a custom provider.
+- r: Reset to system/ISP default DNS.
+- h: Toggle the help menu.
+- q / Esc: Exit the application.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- Inspired by the DNS Switcher plugin for [Noctalia](https://github.com/noctalia-dev/noctalia)
-- Built with [Ratatui](https://github.com/ratatui-org/ratatui) - A Rust library for building terminal user interfaces
+This project is licensed under the MIT License. See the LICENSE file for more information.
