@@ -20,12 +20,11 @@ const BREAKPOINT_TINY_W: u16 = 40;
 const BREAKPOINT_TINY_H: u16 = 8;
 const BREAKPOINT_COMPACT_HEADER: u16 = 65;
 const BREAKPOINT_STACKED_TOAST: u16 = 60;
-const BREAKPOINT_WRAP_IP: u16 = 60;
 
 pub fn render(frame: &mut Frame, app: &mut App) {
     // Main screen layout: header, content, footer.
     let screen = frame.area();
-    let compact_height = screen.height < 18;
+    let compact_height = screen.height < 30;
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -55,14 +54,13 @@ pub fn render(frame: &mut Frame, app: &mut App) {
     }
 
     if app.help_visible {
-        render_help_popup(frame);
+        render_help_popup(frame, app);
     }
 }
 
 fn render_header(frame: &mut Frame, app: &App, area: Rect) {
     let compact = area.width < BREAKPOINT_COMPACT_HEADER;
-    let active_dns_text = match &app.active_dns {
-        Some(ip) if compact => format!(" DNS: {} ", ip),
+    let (active_name, active_ip) = match &app.active_dns {
         Some(ip) => {
             let name = app
                 .providers
@@ -70,24 +68,46 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
                 .find(|p| p.primary == ip || p.secondary == ip)
                 .map(|p| p.name.to_string())
                 .unwrap_or_else(|| "Custom".to_string());
-            format!(" Active: {} ({}) ", name, ip)
+            (name, ip.clone())
         }
-        None if compact => " DNS: checking... ".to_string(),
-        None => " Active: Checking... ".to_string(),
+        None => ("Checking...".to_string(), "...".to_string()),
     };
 
-    let header = Paragraph::new(Line::from(vec![
-        Span::styled("DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
-        Span::raw("  │  "),
-        Span::styled(active_dns_text, Style::default().fg(colors::ACTIVE)),
-    ]))
-    .block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(colors::PRIMARY)),
-    );
+    let status = if app.is_loading { "(Updating...) " } else { "" };
 
-    frame.render_widget(header, area);
+    let header_content = if compact {
+        vec![
+            Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw("│"),
+            Span::styled(status, Style::default().fg(colors::PRIMARY)),
+            Span::styled(active_ip, Style::default().fg(colors::ACTIVE).bold()),
+        ]
+    } else {
+        vec![
+            Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(" │"),
+            Span::styled(
+                if status.is_empty() { " " } else { status },
+                Style::default()
+                    .fg(colors::PRIMARY)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled("Active: ", Style::default().fg(colors::MUTED)),
+            Span::styled(
+                format!("{} ({})", active_name, active_ip),
+                Style::default().fg(colors::ACTIVE).bold(),
+            ),
+        ]
+    };
+
+    frame.render_widget(
+        Paragraph::new(Line::from(header_content)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(colors::PRIMARY)),
+        ),
+        area,
+    );
 }
 
 fn render_provider_list(frame: &mut Frame, app: &mut App, area: Rect) {
@@ -226,8 +246,6 @@ fn render_provider_details(frame: &mut Frame, app: &App, area: Rect, compact: bo
 
         let ultra_compact = compact && (area.height <= 4 || area.width < 48);
 
-        let wrap_long_ip = !compact && area.width < BREAKPOINT_WRAP_IP;
-
         let details = if ultra_compact {
             vec![Line::from(vec![
                 Span::styled(provider.name, Style::default().bold()),
@@ -251,31 +269,14 @@ fn render_provider_details(frame: &mut Frame, app: &App, area: Rect, compact: bo
                 Line::from(""),
             ];
 
-            if wrap_long_ip && is_long_ip(provider.primary) {
-                details.push(Line::from(vec![Span::styled(
-                    "Primary:",
-                    Style::default().fg(colors::MUTED),
-                )]));
-                details.push(Line::from(vec![Span::raw(provider.primary)]));
-            } else {
                 details.push(Line::from(vec![
                     Span::styled("Primary: ", Style::default().fg(colors::MUTED)),
                     Span::raw(provider.primary),
                 ]));
-            }
-
-            if wrap_long_ip && is_long_ip(provider.secondary) {
-                details.push(Line::from(vec![Span::styled(
-                    "Secondary:",
-                    Style::default().fg(colors::MUTED),
-                )]));
-                details.push(Line::from(vec![Span::raw(provider.secondary)]));
-            } else {
                 details.push(Line::from(vec![
                     Span::styled("Secondary: ", Style::default().fg(colors::MUTED)),
                     Span::raw(provider.secondary),
                 ]));
-            }
 
             details.push(Line::from(""));
             details.push(Line::from(vec![
@@ -309,10 +310,6 @@ fn render_provider_details(frame: &mut Frame, app: &App, area: Rect, compact: bo
     }
 }
 
-fn is_long_ip(ip: &str) -> bool {
-    ip.chars().filter(|c| *c != '.').count() > 6
-}
-
 fn render_provider_details_strip(frame: &mut Frame, app: &App, area: Rect) {
     if let Some(provider) = app.selected_provider() {
         let latency_text = app
@@ -336,20 +333,85 @@ fn render_provider_details_strip(frame: &mut Frame, app: &App, area: Rect) {
 }
 
 fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
-    // Contextual help changes while loading.
-    let commands = if app.is_loading {
+    let content = if app.is_loading {
         vec![
             Span::styled(" ⏳ ", Style::default().fg(colors::PRIMARY)),
             Span::raw("Processing..."),
         ]
+    } else if !app.show_help_footer {
+        if let Some(provider) = app.selected_provider() {
+            let (latency_text, quality_text, quality_color) = match app.latencies.get(provider.id) {
+                Some(&ms) => {
+                    let (label, color) = match ms {
+                        0..=35 => ("excelent", Color::Green),
+                        36..=75 => ("good", Color::Cyan),
+                        76..=150 => ("stable", Color::Yellow),
+                        _ => ("slow", Color::Red),
+                    };
+                    (format!("{}ms", ms), label, color)
+                }
+                None => ("N/A".to_string(), "NO TEST", colors::MUTED),
+            };
+
+            let provider_type = if provider.is_custom {
+                "Custom"
+            } else {
+                "System"
+            };
+
+            let mut info = vec![
+                Span::styled(
+                    " DNS Provider:",
+                    Style::default().fg(colors::PRIMARY).bold(),
+                ),
+                Span::raw(" │ "),
+                Span::styled("Pos: ", Style::default().fg(colors::MUTED)),
+                Span::raw(format!("{}/{}", app.selected_index + 1, app.providers.len())),
+                Span::raw(" │ "),
+                Span::styled("Type: ", Style::default().fg(colors::MUTED)),
+                Span::raw(provider_type),
+                Span::raw(" │ "),
+                Span::styled("Speed: ", Style::default().fg(colors::MUTED)),
+                Span::styled(latency_text, Style::default().fg(quality_color).bold()),
+                Span::raw(" ["),
+                Span::styled(quality_text, Style::default().fg(quality_color).bold()),
+                Span::raw("]"),
+            ];
+
+            if area.width > 95 {
+                info.push(Span::raw(" │ "));
+                info.push(Span::styled(
+                    " h ",
+                    Style::default().fg(colors::PRIMARY).bold(),
+                ));
+                info.push(Span::raw("Help  "));
+                info.push(Span::styled(
+                    " q ",
+                    Style::default().fg(colors::PRIMARY).bold(),
+                ));
+                info.push(Span::raw("Quit"));
+            }
+
+            info
+        } else {
+            vec![
+                Span::styled(
+                    " No provider selected ",
+                    Style::default().fg(colors::MUTED),
+                ),
+                Span::raw(" │ "),
+                Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
+                Span::raw("Help"),
+            ]
+        }
     } else if area.width < 56 {
         vec![
             Span::styled(" ↑↓ ", Style::default().fg(colors::PRIMARY).bold()),
-            Span::raw("Nav "),
+            Span::raw("Nav  "),
             Span::styled(" Enter ", Style::default().fg(colors::PRIMARY).bold()),
-            Span::raw("Apply "),
+            Span::raw("Apply  "),
             Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
-            Span::raw("Help "),
+            Span::raw("Help  "),
             Span::styled(" q ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw("Quit"),
         ]
@@ -389,13 +451,14 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
         ]
     };
 
-    let footer = Paragraph::new(Line::from(commands)).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .border_style(Style::default().fg(colors::MUTED)),
+    frame.render_widget(
+        Paragraph::new(Line::from(content)).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(colors::MUTED)),
+        ),
+        area,
     );
-
-    frame.render_widget(footer, area);
 }
 
 fn render_input_popup(frame: &mut Frame, app: &App) {
@@ -507,11 +570,11 @@ fn render_status_toast(frame: &mut Frame, app: &App, header_area: Rect, content_
     }
 }
 
-fn render_help_popup(frame: &mut Frame) {
+fn render_help_popup(frame: &mut Frame, app: &App) {
     let screen = frame.area();
     let area = centered_rect(
-        if screen.width < 90 { 92 } else { 70 },
-        if screen.height < 30 { 70 } else { 55 },
+        if screen.width < 60 { 95 } else if screen.width < 90 { 80 } else { 60 },
+        if screen.height < 15 { 95 } else if screen.height < 30 { 80 } else { 50 },
         screen,
     );
 
@@ -519,51 +582,57 @@ fn render_help_popup(frame: &mut Frame) {
 
     let help_lines = vec![
         Line::from(vec![
-            Span::styled("Navigation", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Navigation    ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": ↑/↓, j/k, Home/End"),
         ]),
         Line::from(vec![
-            Span::styled("Apply DNS", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Apply DNS     ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": Enter"),
         ]),
         Line::from(vec![
-            Span::styled("Test latency", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Test latency  ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": t"),
         ]),
         Line::from(vec![
-            Span::styled("Add custom", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Add custom    ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": a"),
         ]),
         Line::from(vec![
-            Span::styled("Delete custom", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Delete custom ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": d / Delete"),
         ]),
         Line::from(vec![
-            Span::styled("Reset DNS", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Reset DNS     ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": r"),
         ]),
         Line::from(vec![
-            Span::styled("Help", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Help          ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": h (toggle)"),
         ]),
         Line::from(vec![
-            Span::styled("Quit", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled("Quit          ", Style::default().fg(colors::PRIMARY).bold()),
             Span::raw(": q / Esc / Ctrl+C"),
+        ]),
+        Line::from(""),
+        Line::from(vec![
+            Span::styled("Scroll Help   ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::raw(": ↑/↓ or j/k"),
         ]),
         Line::from(""),
         Line::from(Span::styled(
             "Press h, Esc or q to close",
-            Style::default().fg(colors::MUTED),
+            Style::default().fg(colors::MUTED).italic(),
         )),
     ];
 
     let popup = Paragraph::new(help_lines)
+        .scroll((app.help_scroll, 0))
         .block(
             Block::default()
-                .title(" Help ")
+                .title(" Help (↑/↓ to scroll) ")
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(colors::PRIMARY))
-                .padding(Padding::new(2, 2, 1, 1)),
+                .padding(Padding::new(if area.width < 40 { 1 } else { 2 }, 1, 1, 1)),
         )
         .alignment(Alignment::Left);
 

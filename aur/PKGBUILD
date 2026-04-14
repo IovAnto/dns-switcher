@@ -1,6 +1,6 @@
 # Maintainer: IovAnto <iovine.antonio44@gmail.com>
 pkgname=dns-switcher
-pkgver=0.2.0
+pkgver=0.2.1
 pkgrel=1
 pkgdesc="TUI application for real-time DNS switching on Linux"
 arch=('x86_64')

@@ -33,12 +33,14 @@ pub struct App {
     pub message_time: Option<Instant>,
     pub is_loading: bool,
     pub help_visible: bool,
+    pub help_scroll: u16,
+    pub show_help_footer: bool,
     config: Config,
     dns_manager: DnsManager,
 }
 
 impl App {
-    pub fn new() -> Result<Self> {
+    pub fn new(show_help_footer: bool) -> Result<Self> {
         let config = Config::load().unwrap_or_default();
 
         // Start with built-ins, then append persisted custom providers.
@@ -62,6 +64,8 @@ impl App {
             message_time: None,
             is_loading: false,
             help_visible: false,
+            help_scroll: 0,
+            show_help_footer,
             config,
             dns_manager,
         })
@@ -298,6 +302,6 @@ impl App {
 
 impl Default for App {
     fn default() -> Self {
-        Self::new().expect("Failed to initialize app")
+        Self::new(true).expect("Failed to initialize app")
     }
 }

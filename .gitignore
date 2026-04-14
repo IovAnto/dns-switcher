@@ -1,0 +1,16 @@
+# Rust artifacts
+/target/
+
+# Specific project backups
+/backup/
+**/*.rs.bk
+
+# IDEs and OS files
+.vscode/
+.idea/
+.DS_Store
+*.swp
+*~
+
+# Environment files
+.env
