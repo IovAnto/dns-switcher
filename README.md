@@ -16,11 +16,14 @@ The application is built with Rust and features a high-performance, asynchronous
 - Stealth Mode: Optional `--no-help` flag to hide the footer help menu for a more minimalist experience.
 
 ## Screenshots
-
+### Normal mode
 ![Normal mode](media/img/normal.png)
 
+---
+### No help mode
 ![No help mode](media/img/no_help.png)
 
+---
 ## Technical Improvements
 
 Starting from version 0.2.1, dns-switcher has been migrated to an asynchronous event loop using Tokio. This migration ensures that the application remains completely idle while waiting for user input or background tasks, drastically reducing its impact on system resources compared to traditional polling-based TUI applications.
