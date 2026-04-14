@@ -77,14 +77,20 @@ fn render_header(frame: &mut Frame, app: &App, area: Rect) {
 
     let header_content = if compact {
         vec![
-            Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "  DNS Switcher",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(" │ "),
             Span::styled(status, Style::default().fg(colors::PRIMARY)),
             Span::styled(active_ip, Style::default().fg(colors::ACTIVE).bold()),
         ]
     } else {
         vec![
-            Span::styled("  DNS Switcher", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "  DNS Switcher",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(" │ "),
             Span::styled(
                 if status.is_empty() { " " } else { status },
@@ -269,14 +275,14 @@ fn render_provider_details(frame: &mut Frame, app: &App, area: Rect, compact: bo
                 Line::from(""),
             ];
 
-                details.push(Line::from(vec![
-                    Span::styled("Primary: ", Style::default().fg(colors::MUTED)),
-                    Span::raw(provider.primary),
-                ]));
-                details.push(Line::from(vec![
-                    Span::styled("Secondary: ", Style::default().fg(colors::MUTED)),
-                    Span::raw(provider.secondary),
-                ]));
+            details.push(Line::from(vec![
+                Span::styled("Primary: ", Style::default().fg(colors::MUTED)),
+                Span::raw(provider.primary),
+            ]));
+            details.push(Line::from(vec![
+                Span::styled("Secondary: ", Style::default().fg(colors::MUTED)),
+                Span::raw(provider.secondary),
+            ]));
 
             details.push(Line::from(""));
             details.push(Line::from(vec![
@@ -366,7 +372,11 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
                 ),
                 Span::raw(" │ "),
                 Span::styled("Pos: ", Style::default().fg(colors::MUTED)),
-                Span::raw(format!("{}/{}", app.selected_index + 1, app.providers.len())),
+                Span::raw(format!(
+                    "{}/{}",
+                    app.selected_index + 1,
+                    app.providers.len()
+                )),
                 Span::raw(" │ "),
                 Span::styled("Type: ", Style::default().fg(colors::MUTED)),
                 Span::raw(provider_type),
@@ -395,10 +405,7 @@ fn render_footer(frame: &mut Frame, app: &App, area: Rect) {
             info
         } else {
             vec![
-                Span::styled(
-                    " No provider selected ",
-                    Style::default().fg(colors::MUTED),
-                ),
+                Span::styled(" No provider selected ", Style::default().fg(colors::MUTED)),
                 Span::raw(" │ "),
                 Span::styled(" h ", Style::default().fg(colors::PRIMARY).bold()),
                 Span::raw("Help"),
@@ -573,8 +580,20 @@ fn render_status_toast(frame: &mut Frame, app: &App, header_area: Rect, content_
 fn render_help_popup(frame: &mut Frame, app: &App) {
     let screen = frame.area();
     let area = centered_rect(
-        if screen.width < 60 { 95 } else if screen.width < 90 { 80 } else { 60 },
-        if screen.height < 15 { 95 } else if screen.height < 30 { 80 } else { 50 },
+        if screen.width < 60 {
+            95
+        } else if screen.width < 90 {
+            80
+        } else {
+            60
+        },
+        if screen.height < 15 {
+            95
+        } else if screen.height < 30 {
+            80
+        } else {
+            50
+        },
         screen,
     );
 
@@ -582,40 +601,67 @@ fn render_help_popup(frame: &mut Frame, app: &App) {
 
     let help_lines = vec![
         Line::from(vec![
-            Span::styled("Navigation    ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Navigation    ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": ↑/↓, j/k, Home/End"),
         ]),
         Line::from(vec![
-            Span::styled("Apply DNS     ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Apply DNS     ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": Enter"),
         ]),
         Line::from(vec![
-            Span::styled("Test latency  ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Test latency  ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": t"),
         ]),
         Line::from(vec![
-            Span::styled("Add custom    ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Add custom    ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": a"),
         ]),
         Line::from(vec![
-            Span::styled("Delete custom ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Delete custom ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": d / Delete"),
         ]),
         Line::from(vec![
-            Span::styled("Reset DNS     ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Reset DNS     ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": r"),
         ]),
         Line::from(vec![
-            Span::styled("Help          ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Help          ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": h (toggle)"),
         ]),
         Line::from(vec![
-            Span::styled("Quit          ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Quit          ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": q / Esc / Ctrl+C"),
         ]),
         Line::from(""),
         Line::from(vec![
-            Span::styled("Scroll Help   ", Style::default().fg(colors::PRIMARY).bold()),
+            Span::styled(
+                "Scroll Help   ",
+                Style::default().fg(colors::PRIMARY).bold(),
+            ),
             Span::raw(": ↑/↓ or j/k"),
         ]),
         Line::from(""),
