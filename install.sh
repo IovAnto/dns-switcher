@@ -52,7 +52,11 @@ check_deps() {
     fi
     
     if ! command -v resolvectl &> /dev/null; then
-        warn "resolvectl not found. dns-switcher requires it to function."
+        warn "resolvectl not found. dns-switcher requires systemd-resolved to function."
+    fi
+
+    if ! command -v iwctl &> /dev/null; then
+        warn "iwctl (iwd) not found. dns-switcher requires iwd to function."
     fi
     
     if [ ${#missing[@]} -gt 0 ]; then

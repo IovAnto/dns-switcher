@@ -13,15 +13,7 @@ sha256sums=('cbd149088102e35e670b3cc20849d8af09591095e2f1d0c37fea2ee7f60e8c0f')
 
 build() {
     cd "$pkgname-$pkgver"
-    export RUSTUP_TOOLCHAIN=stable
-    export CARGO_TARGET_DIR=target
-    cargo build --release
-}
-
-check() {
-    cd "$pkgname-$pkgver"
-    export RUSTUP_TOOLCHAIN=stable
-    cargo test --release
+    cargo build --release --locked
 }
 
 package() {

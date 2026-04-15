@@ -1,16 +1,22 @@
-# Rust artifacts
+# Rust
 /target/
 
-# Specific project backups
-/backup/
-**/*.rs.bk
+# Arch/AUR build artifacts (temporary)
+/pkg/
+/src/dns-switcher-*/
 
-# IDEs and OS files
+# build artifacts
+*.pkg.tar.zst
+*.pkg.tar.zst.sig
+*.tar.gz
+*.tar.xz
+*.old
+
+# Arch/AUR metadata
+.SRCINFO
+
+# Editor/System
 .vscode/
 .idea/
-.DS_Store
 *.swp
-*~
-
-# Environment files
-.env
+.DS_Store

@@ -30,28 +30,32 @@ Starting from version 0.2.1, dns-switcher has been migrated to an asynchronous e
 
 ## Requirements
 
-- Linux: The tool is designed for Linux-based systems.
-- NetworkManager or Resolvconf: The tool requires system-level permissions or standard backends to modify DNS settings.
+- **Linux**: Specifically designed for Linux-based systems.
+- **systemd-resolved**: Used to manage and apply DNS settings.
+- **iwd**: Required for WiFi network management and DNS assignment.
+- **polkit**: Required for non-root execution (handles permission elevation).
 
 ## Installation
 
 ### AUR (Arch Linux)
-The package is available in the Arch User Repository:
+The recommended installation method for Arch Linux users:
 ```bash
 yay -S dns-switcher
 ```
 
-### Cargo
-Install directly from crates.io using the Rust toolchain:
-```bash
-cargo install dns-switcher
-```
-
-### Installation via Script (curl)
-You can install the latest version of dns-switcher directly using this script. It handles cloning, building, and installing the binary to your local path.
-
+### Installation via Script (Recommended for other distros)
+Install the latest pre-compiled binary from GitHub Releases:
 ```bash
 curl -sSL https://raw.githubusercontent.com/IovAnto/dns-switcher/main/install.sh | bash
+```
+
+### From Source
+If you have the Rust toolchain installed:
+```bash
+git clone https://github.com/IovAnto/dns-switcher
+cd dns-switcher
+cargo build --release
+sudo install -m755 target/release/dns-switcher /usr/local/bin/
 ```
 
 ## Usage
